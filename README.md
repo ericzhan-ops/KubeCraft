@@ -1,19 +1,34 @@
-Deploy Kubernetes in Minutes, Not Days!
-Tired of complex kubectl commands and endless YAML files? KubeCraft makes Kubernetes deployment accessible to everyone!
-﻿
-🎯 What makes KubeCraft special?
-﻿
-✅ No CLI Expertise Required - Web interface guides you through every step
-✅ Full Automation - From empty servers to running applications in one click
-✅ Battle-Tested Stack - Go + Ansible + Shell = production-ready reliability
-✅ Open & Extensible - Modify every part of the deployment chain
-﻿
-🔄 Simple 3-Step Process:
-﻿
-Fill the web form with your requirements
-﻿
-Click the deploy button
-﻿
-Watch as KubeCraft builds your entire Kubernetes cluster
-﻿
-Perfect for: DevOps teams, startups, educational environments, and anyone who wants to simplify their Kubernetes journey!
+# KubeCraft 🚀
+
+<div align="center">
+
+**Kubernetes Deployment Automation Platform / Kubernetes 自动化部署平台**
+
+[![English](https://img.shields.io/badge/English-🇺🇸-blue)](README_en.md)
+[![中文](https://img.shields.io/badge/中文-🇨🇳-red)](README_zh.md)
+
+</div>
+
+---
+
+## 🌐 Choose Language / 选择语言
+
+### English Documentation
+For complete English documentation, features, and setup instructions:  
+**[📖 View English README](README_en.md)**
+
+### 中文文档
+查看完整的中文文档、功能说明和安装指南：  
+**[📖 查看中文 README](README_zh.md)**
+
+---
+
+## 🚀 Quick Start / 快速开始
+
+```bash
+# Clone the repository
+git clone https://github.com/yourname/kubecraft.git
+cd kubecraft
+
+# Follow language-specific instructions
+# 请查看对应语言的详细说明
