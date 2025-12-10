@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K8s Cluster Config Generator</title>
+    <title>Kubernetes Deployment Automation Platform</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -138,9 +138,25 @@
         <button class="lang-btn" onclick="switchLanguage('en')">English</button>
     </div>
 
-    <h1 id="page-title">K8s 集群配置生成器</h1>
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h1 style="color: #007cba; font-size: 2.5em; margin-bottom: 5px;">KubeCraft</h1>
+        <p style="color: #666; font-size: 1.2em;" id="page-title">Kubernetes 自动化部署平台</p>
+    </div>
 
     <form id="configForm">
+        <!-- OS Type Selection -->
+        <div class="section">
+            <h2 class="section-title" id="os-type-title">操作系统选择</h2>
+            
+            <div class="form-group">
+                <select id="osType" name="osType" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                    <option value="0">CentOS 7</option>
+                    <option value="1">Ubuntu 20</option>
+                    <option value="2">Rocky 9</option>
+                </select>
+            </div>
+        </div>
+
         <!-- Masters Section -->
         <div class="section">
             <h2 class="section-title" id="masters-title">Master 节点配置</h2>
@@ -230,13 +246,13 @@
         </div>
 
         <div class="action-buttons">
-            <button type="button" id="generate-btn" onclick="generateConfig()">验证初始化配置</button>
+            <button type="button" id="generate-btn" onclick="generateConfig()">初始化配置</button>
             <button type="button" class="init-btn" id="init-btn" onclick="initCluster()">初始化</button>
             <button type="button" class="deploy-btn" id="deploy-btn" onclick="deployCluster()">部署</button>
         </div>
     </form>
 
-    <h2 id="output-title">生成的配置</h2>
+    <h2 id="output-title">初始化配置信息</h2>
     <pre id="output"></pre>
 </div>
 
@@ -244,7 +260,9 @@
     // 国际化文本
     const translations = {
         zh: {
-            'page-title': 'K8s 集群配置生成器',
+            'page-title': 'Kubernetes 自动化部署平台',
+            'os-type-title': '操作系统选择',
+
             'masters-title': 'Master 节点配置',
             'nodes-title': 'Worker 节点配置',
             'basic-config-title': '基础配置',
@@ -263,10 +281,10 @@
             'nfs-server-label': 'NFS 服务器 IP:',
             'add-master-btn': '添加 Master 节点',
             'add-node-btn': '添加 Worker 节点',
-            'generate-btn': '验证初始化配置',
+            'generate-btn': '初始化配置',
             'init-btn': '初始化',
             'deploy-btn': '部署',
-            'output-title': '生成的配置',
+            'output-title': '初始化配置',
             'master-hostname-placeholder': '主机名 (如: prod.k8s.master{num}.hq)',
             'master-ip-placeholder': 'IP 地址 (如: {ip})',
             'node-hostname-placeholder': '主机名 (如: prod.k8s.node{num}.hq)',
@@ -274,7 +292,9 @@
             'remove-btn': '删除'
         },
         en: {
-            'page-title': 'K8s Cluster Config Generator',
+            'page-title': 'Kubernetes Deployment Automation Platform',
+            'os-type-title': 'Operating System Selection',
+
             'masters-title': 'Master Nodes Configuration',
             'nodes-title': 'Worker Nodes Configuration',
             'basic-config-title': 'Basic Configuration',
@@ -478,7 +498,7 @@
         button.parentElement.remove();
     }
 
-    // 验证初始化配置
+    // 初始化配置
     function generateConfig() {
         try {
             // 清空输出框内容
@@ -603,14 +623,15 @@
                 podNetwork: podNetwork,
                 loadBalancerIP: document.getElementById('loadBalancerIP').value,
                 nfsDir: document.getElementById('nfsDir').value,
-                nfsServerIP: document.getElementById('nfsServerIP').value
+                nfsServerIP: document.getElementById('nfsServerIP').value,
+                osType: document.getElementById('osType').value
             };
             
             // 显示生成的配置
             document.getElementById('output').textContent = JSON.stringify(config, null, 2);
             
-            // 恢复输出标题为"生成的配置"
-            document.getElementById('output-title').textContent = currentLanguage === 'zh' ? '生成的配置' : 'Generated Configuration';
+            // 恢复输出标题为"初始化配置"
+            document.getElementById('output-title').textContent = currentLanguage === 'zh' ? '初始化配置' : 'Initial Configuration';
         } catch (error) {
             alert(currentLanguage === 'zh' ? '配置生成出错: ' + error.message : 'Error generating configuration: ' + error.message);
         }
@@ -640,7 +661,7 @@
         document.getElementById('output-title').textContent = currentLanguage === 'zh' ? '初始化进度' : 'Initialization Progress';
 
         // 建立SSE连接获取进度
-        const eventSource = new EventSource('http://localhost:8080/api/init/progress');
+        const eventSource = new EventSource('/api/init/progress');
         
         eventSource.onmessage = function(event) {
             const data = JSON.parse(event.data);
@@ -699,7 +720,7 @@
         document.getElementById('output-title').textContent = currentLanguage === 'zh' ? '部署进度' : 'Deployment Progress';
 
         // 建立SSE连接获取进度
-        const eventSource = new EventSource('http://localhost:8080/api/deploy/progress');
+        const eventSource = new EventSource('/api/deploy/progress');
         
         eventSource.onmessage = function(event) {
             const data = JSON.parse(event.data);

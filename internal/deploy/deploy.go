@@ -3,28 +3,12 @@ package deploy
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"time"
 
 	"KubeCraft/internal/utils"
 )
-
-// Config 结构体定义配置参数
-type Config struct {
-	Masters             map[string]string `json:"masters"`
-	Nodes               map[string]string `json:"nodes"`
-	FirstMasterHostname string            `json:"firstMasterHostname"`
-	SshUser             string            `json:"sshUser"`
-	SshPass             string            `json:"sshPass"`
-	SshPort             int               `json:"sshPort"`
-	NetworkAdapter      string            `json:"networkAdapter"`
-	KeepalivedVip       string            `json:"keepalivedVip"`
-	ServiceNetwork      string            `json:"serviceNetwork"`
-	PodNetwork          string            `json:"podNetwork"`
-	LoadBalancerIP      string            `json:"loadBalancerIP"`
-	NfsDir              string            `json:"nfsDir"`
-	NfsServerIP         string            `json:"nfsServerIP"`
-}
 
 // ProgressReporter 进度报告接口
 type ProgressReporter interface {
@@ -42,15 +26,29 @@ var Playbooks = []string{
 }
 
 // Process 执行集群部署过程
-func Process(config Config, reporter ProgressReporter) error {
+func Process(config utils.Config, reporter ProgressReporter) error {
 	log.Println("Starting cluster deployment...")
+
+	// 生成 Ansible inventory 文件
+	reporter.ReportProgress("生成 Ansible inventory 文件...")
+	inventoryFile, err := config.GenerateInventory()
+	if err != nil {
+		return fmt.Errorf("failed to generate Ansible inventory: %v", err)
+	}
+	// 确保在函数结束时删除临时文件
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+			return
+		}
+	}(inventoryFile)
 
 	// 按顺序执行所有部署 playbook
 	for i, playbook := range Playbooks {
 		stepMsg := fmt.Sprintf("执行%s (%d/%d)...", playbook, i+1, len(Playbooks))
 		reporter.ReportProgress(stepMsg)
 
-		err := executeAnsiblePlaybook(playbook)
+		err := executeAnsiblePlaybook(playbook, inventoryFile)
 		if err != nil {
 			return fmt.Errorf("failed to execute playbook %s: %v", playbook, err)
 		}
@@ -59,7 +57,7 @@ func Process(config Config, reporter ProgressReporter) error {
 	// 安装附加组件
 	reporter.ReportProgress("安装附加组件...")
 	log.Println("Installing additional components...")
-	err := installAdditionalComponents(reporter)
+	err = installAdditionalComponents(reporter)
 	if err != nil {
 		return err
 	}
@@ -70,12 +68,12 @@ func Process(config Config, reporter ProgressReporter) error {
 }
 
 // executeAnsiblePlaybook 执行指定的 Ansible Playbook
-func executeAnsiblePlaybook(playbookName string) error {
+func executeAnsiblePlaybook(playbookName string, inventoryFile string) error {
 	// 等待一段时间确保系统准备就绪
 	time.Sleep(1 * time.Second)
 
 	cmd := exec.Command("bash", "-c",
-		fmt.Sprintf("cd /usr/local/ymctl/ansiblePlaybook && ansible-playbook -i /usr/local/ymctl/ymctl %s.yaml", playbookName))
+		fmt.Sprintf("cd /usr/local/ymctl/ansiblePlaybook && ansible-playbook -i %s %s.yaml", inventoryFile, playbookName))
 
 	// 执行命令并返回结果
 	output, err := cmd.CombinedOutput()

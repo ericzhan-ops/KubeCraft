@@ -1,6 +1,7 @@
 package main
 
 import (
+	"KubeCraft/internal/utils"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -49,7 +50,10 @@ func (s *SSEProgressReporter) ReportProgress(message string) {
 	}
 
 	data, _ := json.Marshal(progress)
-	fmt.Fprintf(s.writer, "data: %s\n\n", string(data))
+	_, err := fmt.Fprintf(s.writer, "data: %s\n\n", string(data))
+	if err != nil {
+		return
+	}
 	s.writer.(http.Flusher).Flush()
 
 	// 短暂延迟以模拟处理时间
@@ -58,9 +62,6 @@ func (s *SSEProgressReporter) ReportProgress(message string) {
 
 func main() {
 	// 注册API路由处理器，添加CORS支持
-	http.HandleFunc("/api/init", corsMiddleware(initializeCluster))
-	http.HandleFunc("/api/deploy", corsMiddleware(deployCluster))
-	// 添加SSE进度推送接口
 	http.HandleFunc("/api/init/progress", corsMiddleware(initializeProgress))
 	http.HandleFunc("/api/deploy/progress", corsMiddleware(deployProgress))
 
@@ -109,10 +110,10 @@ func initializeProgress(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// 解析请求体中的配置
-	var config initialize.Config
+	var config utils.Config
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
 		// 如果没有请求体，使用默认配置
-		config = initialize.Config{}
+		config = utils.Config{}
 	}
 
 	// 创建进度报告器
@@ -134,7 +135,10 @@ func initializeProgress(w http.ResponseWriter, r *http.Request) {
 			Total:   reporter.total,
 		}
 		data, _ := json.Marshal(errorMsg)
-		fmt.Fprintf(w, "data: %s\n\n", string(data))
+		_, err := fmt.Fprintf(w, "data: %s\n\n", string(data))
+		if err != nil {
+			return
+		}
 		w.(http.Flusher).Flush()
 	} else {
 		complete := ProgressMessage{
@@ -144,7 +148,10 @@ func initializeProgress(w http.ResponseWriter, r *http.Request) {
 			Total:   reporter.total,
 		}
 		data, _ := json.Marshal(complete)
-		fmt.Fprintf(w, "data: %s\n\n", string(data))
+		_, err = fmt.Fprintf(w, "data: %s\n\n", string(data))
+		if err != nil {
+			return
+		}
 		w.(http.Flusher).Flush()
 	}
 }
@@ -158,10 +165,10 @@ func deployProgress(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// 解析请求体中的配置
-	var config deploy.Config
+	var config utils.Config
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
 		// 如果没有请求体，使用默认配置
-		config = deploy.Config{}
+		config = utils.Config{}
 	}
 
 	// 创建进度报告器
@@ -183,7 +190,10 @@ func deployProgress(w http.ResponseWriter, r *http.Request) {
 			Total:   reporter.total,
 		}
 		data, _ := json.Marshal(errorMsg)
-		fmt.Fprintf(w, "data: %s\n\n", string(data))
+		_, err = fmt.Fprintf(w, "data: %s\n\n", string(data))
+		if err != nil {
+			return
+		}
 		w.(http.Flusher).Flush()
 	} else {
 		complete := ProgressMessage{
@@ -193,81 +203,12 @@ func deployProgress(w http.ResponseWriter, r *http.Request) {
 			Total:   reporter.total,
 		}
 		data, _ := json.Marshal(complete)
-		fmt.Fprintf(w, "data: %s\n\n", string(data))
+		_, err = fmt.Fprintf(w, "data: %s\n\n", string(data))
+		if err != nil {
+			return
+		}
 		w.(http.Flusher).Flush()
 	}
-}
-
-// initializeCluster 处理集群初始化
-func initializeCluster(w http.ResponseWriter, r *http.Request) {
-	// 设置响应头
-	w.Header().Set("Content-Type", "application/json")
-
-	// 只允许 POST 方法
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var config initialize.Config
-	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		http.Error(w, "Invalid request format: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// 将配置传递给初始化模块处理
-	err := initialize.Process(config, &SimpleProgressReporter{})
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"message": "Cluster initialization failed",
-			"error":   err.Error(),
-			"code":    http.StatusInternalServerError,
-		})
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "Cluster initialization completed successfully",
-		"code":    http.StatusOK,
-	})
-}
-
-// deployCluster 处理集群部署
-func deployCluster(w http.ResponseWriter, r *http.Request) {
-	// 设置响应头
-	w.Header().Set("Content-Type", "application/json")
-
-	// 只允许 POST 方法
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var config deploy.Config
-	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		http.Error(w, "Invalid request format: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// 将配置传递给部署模块处理
-	err := deploy.Process(config, &SimpleProgressReporter{})
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"message": "Cluster deployment failed",
-			"error":   err.Error(),
-			"code":    http.StatusInternalServerError,
-		})
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "Cluster deployment completed successfully",
-		"code":    http.StatusOK,
-	})
 }
 
 // SimpleProgressReporter 简单进度报告器（用于非SSE接口）
