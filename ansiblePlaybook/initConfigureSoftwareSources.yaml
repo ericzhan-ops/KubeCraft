@@ -1,0 +1,65 @@
+- name: Ensure the /etc/yum.repos.d directory exists
+  hosts: all
+  tasks:
+    - name: Create /etc/yum.repos.d directory if it doesn't exist
+      file:
+        path: /etc/yum.repos.d
+        state: directory
+
+- name: Configure Aliyun software source
+  hosts: all
+  tasks:
+    - name: Download CentOS-Base.repo
+      get_url:
+        url: https://mirrors.aliyun.com/repo/Centos-7.repo
+        dest: /etc/yum.repos.d/CentOS-Base.repo
+
+    - name: Download epel.repo
+      get_url:
+        url: http://mirrors.aliyun.com/repo/epel-7.repo
+        dest: /etc/yum.repos.d/epel.repo
+
+- name: Configure Kubernetes software source
+  hosts: all
+  tasks:
+    - name: Ensure /etc/yum.repos.d/kubernetes.repo file exists
+      file:
+        path: /etc/yum.repos.d/kubernetes.repo
+        state: touch
+
+    - name: Add content to /etc/yum.repos.d/kubernetes.repo
+      blockinfile:
+        path: /etc/yum.repos.d/kubernetes.repo
+        block: |
+          [kubernetes]
+          name=Kubernetes
+          baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64/
+          enabled=1
+          gpgcheck=0
+          repo_gpgcheck=0
+
+- name: Install cluster common software
+  hosts: all
+  tasks:
+    - name: Install necessary packages
+      yum:
+        name:
+          - expect
+          - wget
+          - jq
+          - psmisc
+          - vim
+          - net-tools
+          - telnet
+          - yum-utils
+          - device-mapper-persistent-data
+          - lvm2
+          - git
+          - ntpdate
+          - chrony
+          - bind-utils
+          - rsync
+          - unzip
+          - git
+          - lrzsz
+        state: present

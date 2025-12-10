@@ -1,0 +1,23 @@
+- name: Update /etc/hosts
+  hosts: all
+  tasks:
+    - name: Load variables from JSON file
+      ansible.builtin.include_vars:
+        file: /usr/local/ymctl/config.json
+        name: config
+
+    - name: Copy Hosts template to the target machine
+      ansible.builtin.copy:
+        src: /usr/local/ymctl/templates/hosts.j2
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Render the Nginx configuration using the template
+      ansible.builtin.template:
+        src: /etc/hosts
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: '0644'

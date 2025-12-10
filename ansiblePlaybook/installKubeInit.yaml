@@ -1,0 +1,69 @@
+---
+- name: Install Kube
+  hosts: all
+  become: true
+  tasks:
+    - name: check kube
+      shell: kubectl help
+      register: check_kube
+      ignore_errors: true
+
+    - block:
+      - name: Install kubeadm, kubelet, and kubectl
+        ansible.builtin.yum:
+          name: "{{ item }}"
+          state: present
+        with_items:
+          - kubelet-1.28.1
+          - kubeadm-1.28.1
+          - kubectl-1.28.1
+
+      - name: Enable and start kubelet service
+        ansible.builtin.systemd:
+          name: kubelet
+          enabled: yes
+          state: started
+
+      - name: Include JSON configuration file
+        ansible.builtin.include_vars:
+          file: /usr/local/ymctl/config.json
+          name: config
+
+      - name: Create kubeadm-init configuration file
+        ansible.builtin.template:
+          src: /usr/local/ymctl/templates/kubeadm-init.yaml.j2
+          dest: /tmp/kubeadm-init.yaml
+        delegate_to: localhost
+        run_once: true
+
+      - name: Initialize Kubernetes Cluster (run only on the first master)
+        shell: kubeadm init --config /tmp/kubeadm-init.yaml --upload-certs
+        delegate_to: localhost
+        run_once: true
+        register: kubeadm_init
+
+      - name: Create cluster user authorization file (run only on the first master)
+        shell: |
+          mkdir -p $HOME/.kube
+          sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+          sudo chown $(id -u):$(id -g) $HOME/.kube/config
+        delegate_to: localhost
+        run_once: true
+
+      - name: Kubeadm init info output file
+        shell: echo "{{ kubeadm_init.stdout }}" > /tmp/kubeadm_init
+        delegate_to: localhost
+        run_once: true
+
+      - name: Master joining cluster command
+        shell: echo "{{ kubeadm_init.stdout }}" | sed -n '/^\s*kubeadm join/ { :start /\\$/ { N; s/\\\n/ /; b start } ; s/[[:space:]]\+/ /g; s/^ //p }' > /tmp/master_join_command
+        register: master_join
+        delegate_to: localhost
+        run_once: true
+
+      - name: Node joining cluster command
+        shell: echo "{{ kubeadm_init.stdout }}" | sed -n '/^\s*kubeadm join/ { :start /\\$/ { N; s/\\\n/ /; b start } ; s/--control-plane --certificate-key [^ ]*//; s/[[:space:]]\+/ /g; s/^ //p }' > /tmp/node_join_command
+        register: node_join
+        delegate_to: localhost
+        run_once: true
+      when: check_kube.rc != 0

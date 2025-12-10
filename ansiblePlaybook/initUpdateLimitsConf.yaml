@@ -1,0 +1,12 @@
+- name: Update /etc/security/limits.conf
+  hosts: all
+  tasks:
+    - name: Create limits.conf file
+      blockinfile:
+        path: /etc/security/limits.conf
+        marker: '# {mark} ANSIBLE MANAGED BLOCK'
+        block: |
+          *       soft    noproc     65535
+          *       hard    noproc    131070
+          *       soft    nofile     65535
+          *       hard    nofile    131070

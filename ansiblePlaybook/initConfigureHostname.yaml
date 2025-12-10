@@ -1,0 +1,19 @@
+- name: Configure Hostname
+  hosts: all
+  tasks:
+    - name: Read JSON configuration file
+      slurp:
+        src: "/usr/local/ymctl/config.json"
+      register: json_content
+      delegate_to: localhost
+      run_once: true
+
+    - name: Set hostname based on IP from JSON
+      set_fact:
+        hosts_mapping: "{{ json_content.content | b64decode | from_json }}"
+
+    - name: Set hostname based on IP from JSON
+      hostname:
+        name: "{{ item[0] }}"
+      loop: "{{ hosts_mapping.masters.items() | list + hosts_mapping.nodes.items() | list }}"
+      when: ansible_default_ipv4.address == item[1]

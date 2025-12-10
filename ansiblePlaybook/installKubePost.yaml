@@ -1,0 +1,62 @@
+---
+- name: Install Kube
+  hosts: all
+  become: true
+  tasks:
+    - name: check kube
+      shell: kubectl version
+      register: check_kube
+      ignore_errors: true
+
+    - block:
+      - name: Include JSON configuration file
+        ansible.builtin.include_vars:
+          file: /usr/local/ymctl/config.json
+          name: config
+
+      - name: Get hostname
+        shell: hostname
+        register: hostname
+
+      - name: Check if Kubelet is active
+        ansible.builtin.shell:
+          cmd: systemctl is-active kubelet
+        register: kubelet_status
+        ignore_errors: true
+
+      - name: Assert Kubelet is active
+        ansible.builtin.assert:
+          that: "kubelet_status.stdout == 'active'"
+          fail_msg: "kubelet is not active"
+
+      - name: Check kubectl version
+        ansible.builtin.command: kubectl version --client --output=yaml
+
+      - name: Append aliases to /etc/profile
+        lineinfile:
+          path: /etc/profile
+          line: "{{ item }}"
+          state: present
+        with_items:
+          - 'alias k=kubectl'
+          - 'alias kg="kubectl get pod -A -owide | grep"'
+          - 'alias kgs="kubectl get svc -A -owide | grep"'
+          - 'alias kgi="kubectl get ingress -A | grep"'
+          - 'alias kgcm="kubectl get configmap -A | grep"'
+          - 'alias kgse="kubectl get secret -A | grep"'
+          - 'alias kgpv="kubectl get pv -A | grep"'
+          - 'alias kgpvc="kubectl get pvc -A | grep"'
+          - 'alias hl="helm list -A | grep"'
+
+      - name: Delete Master Roles
+        shell: kubectl label nodes {{ hostname.stdout }} node-role.kubernetes.io/control-plane- --overwrite
+        when: inventory_hostname in groups['masters']
+
+      - name: Modify Master Roles
+        shell: kubectl label nodes {{ hostname.stdout }} node-role.kubernetes.io/master= --overwrite
+        when: inventory_hostname in groups['masters']
+
+      - name: Modify Node Roles
+        shell: kubectl label nodes {{ hostname.stdout }} node-role.kubernetes.io/node= --overwrite
+        when: inventory_hostname in groups['nodes']
+      when: check_kube.rc == 0

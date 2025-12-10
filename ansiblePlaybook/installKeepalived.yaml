@@ -1,0 +1,55 @@
+- name: Install and configure keepalived
+  hosts: masters
+  become: yes
+  tasks:
+    - name: check keepalived
+      shell: ps aux | grep keepalived | grep -v grep
+      register: check_keepalived
+      ignore_errors: true
+
+    - block:
+      - name: Install keepalived
+        ansible.builtin.yum:
+          name: keepalived
+          state: present
+
+      - name: Include JSON configuration file
+        ansible.builtin.include_vars:
+          file: /usr/local/ymctl/config.json
+          name: config
+
+      - name: Create keepalived configuration file
+        ansible.builtin.template:
+          src: /usr/local/ymctl/templates/keepalived.conf.j2
+          dest: /etc/keepalived/keepalived.conf
+        notify: restart keepalived
+
+      - name: Create check_port.sh script
+        ansible.builtin.template:
+          src: /usr/local/ymctl/templates/check_port.sh.j2
+          dest: /etc/keepalived/check_port.sh
+          mode: '0755'
+
+      - name: Enable and start keepalived
+        ansible.builtin.systemd:
+          name: keepalived
+          enabled: yes
+          state: started
+
+      - name: Check if Keepalived is active
+        ansible.builtin.shell:
+          cmd: systemctl is-active keepalived
+        register: keepalived_status
+        ignore_errors: true
+
+      - name: Assert Keepalived is active
+        ansible.builtin.assert:
+          that: "keepalived_status.stdout == 'active'"
+          fail_msg: "keepalived is not active"
+      when: check_keepalived.rc != 0
+
+  handlers:
+    - name: restart keepalived
+      ansible.builtin.systemd:
+        name: keepalived
+        state: restarted

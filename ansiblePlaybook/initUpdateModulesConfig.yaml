@@ -1,0 +1,23 @@
+- name: Configure kernel modules
+  hosts: all
+  tasks:
+    - name: Load br_netfilter module
+      shell: modprobe br_netfilter
+
+    - name: Load ip_conntrack module
+      shell: modprobe ip_conntrack
+
+    - name: Configure kernel modules at boot
+      copy:
+        dest: /etc/sysconfig/modules/br_netfilter.modules
+        content: 'modprobe br_netfilter'
+        mode: '0755'
+
+    - name: Configure kernel modules at boot
+      copy:
+        dest: /etc/sysconfig/modules/ip_conntrack.modules
+        content: 'modprobe ip_conntrack'
+        mode: '0755'
+
+    - name: Make modules scripts executable
+      shell: chmod 755 /etc/sysconfig/modules/br_netfilter.modules /etc/sysconfig/modules/ip_conntrack.modules

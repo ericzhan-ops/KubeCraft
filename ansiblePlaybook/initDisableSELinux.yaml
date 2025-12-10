@@ -1,0 +1,8 @@
+- name: Disable SELinux
+  hosts: all
+  tasks:
+    - name: Update SELinux configuration
+      lineinfile:
+        path: /etc/selinux/config
+        regexp: '^SELINUX=enforcing$'
+        line: 'SELINUX=disabled'

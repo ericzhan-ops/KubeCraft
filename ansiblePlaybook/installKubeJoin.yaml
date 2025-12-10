@@ -1,0 +1,62 @@
+---
+- name: Install Kube
+  hosts: all
+  become: true
+  serial: 1
+  tasks:
+    - name: check kube
+      shell: kubectl version
+      register: check_kube
+      ignore_errors: true
+
+    - block:
+      - name: Master joining cluster command
+        shell: cat /tmp/master_join_command
+        register: master_join
+        delegate_to: localhost
+        run_once: true
+
+      - name: Node joining cluster command
+        shell: cat /tmp/node_join_command
+        register: node_join
+        delegate_to: localhost
+        run_once: true
+
+      - name: Set master join command as a global variable
+        set_fact:
+          master_join_command: "{{ master_join.stdout }}"
+
+      - name: Set node join command as a global variable
+        set_fact:
+          node_join_command: "{{ node_join.stdout }}"
+
+      - name: Include JSON configuration file
+        ansible.builtin.include_vars:
+          file: /usr/local/ymctl/config.json
+          name: config
+
+      - name: Get hostname
+        shell: hostname
+        register: hostname
+
+      - name: Master joining cluster
+        shell: "{{ master_join_command }}"
+        when: config.firstMasterHostname != hostname.stdout and inventory_hostname in groups['masters']
+
+      - name: Node joining cluster
+        shell: "{{ node_join_command }}"
+        when: inventory_hostname in groups['nodes']
+
+      - name: Create kube dir
+        ansible.builtin.file:
+          path: /root/.kube
+          state: directory
+          mode: "0755"
+        when: config.firstMasterHostname != hostname.stdout
+
+      - name: Create cluster user authorization file
+        copy:
+          src: /root/.kube/config
+          dest: /root/.kube/config
+        when: config.firstMasterHostname != hostname.stdout
+      when: check_kube.rc != 0

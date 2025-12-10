@@ -1,0 +1,14 @@
+- name: Update /etc/ssh/sshd_config
+  hosts: all
+  tasks:
+    - name: Disable UseDNS in sshd_config
+      replace:
+        path: /etc/ssh/sshd_config
+        regexp: '^#UseDNS yes'
+        replace: 'UseDNS no'
+
+    - name: Disable GSSAPIAuthentication in sshd_config
+      replace:
+        path: /etc/ssh/sshd_config
+        regexp: '^GSSAPIAuthentication yes'
+        replace: 'GSSAPIAuthentication no'

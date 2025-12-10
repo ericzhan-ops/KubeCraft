@@ -1,0 +1,16 @@
+- name: Disable swap and update /etc/fstab
+  hosts: all
+  tasks:
+    - name: Turn off swap
+      shell: swapoff -a
+
+    - name: Update vm.swappiness
+      sysctl:
+        name: vm.swappiness
+        value: 0
+
+    - name: Comment out swap in /etc/fstab
+      replace:
+        path: /etc/fstab
+        regexp: '^[^#]*swap'
+        replace: '#&'

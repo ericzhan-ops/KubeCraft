@@ -1,0 +1,64 @@
+- name: Deploy containerd on CentOS
+  hosts: all
+  tasks:
+    - name: check containerd
+      shell: ps aux | grep containerd | grep -v grep
+      register: check_containerd
+      ignore_errors: true
+
+    - block:
+        - name: Upgrade libseccomp to version 2.5.1
+          yum:
+            name: https://yum.oracle.com/repo/OracleLinux/OL8/baseos/latest/x86_64/getPackage/libseccomp-2.5.2-1.el8.x86_64.rpm
+            state: present
+
+        - name: Extract containerd release
+          ansible.builtin.unarchive:
+            src: /usr/local/ymctl/pkg/cri-containerd-cni-1.6.4-linux-amd64.tar.gz
+            dest: /
+
+        - name: Create containerd config directory
+          file:
+            path: /etc/containerd
+            state: directory
+
+        - name: Create containerd config file
+          file:
+            path: /etc/containerd/config.toml
+            state: touch
+
+        - name: Generate default containerd config
+          shell: containerd config default > /etc/containerd/config.toml
+
+        - name: Replace default pause image registry
+          ansible.builtin.replace:
+            path: /etc/containerd/config.toml
+            regexp: 'k8s.gcr.io'
+            replace: 'registry.cn-beijing.aliyuncs.com/abcdocker'
+
+        - name: Configure systemd as the cgroup driver
+          ansible.builtin.replace:
+            path: /etc/containerd/config.toml
+            regexp: 'SystemdCgroup = false'
+            replace: 'SystemdCgroup = true'
+
+        - name: Enable and start containerd
+          ansible.builtin.systemd:
+            name: containerd
+            enabled: yes
+            state: started
+
+        - name: Check if containerd is active
+          ansible.builtin.shell:
+            cmd: systemctl is-active containerd
+          register: containerd_status
+          ignore_errors: true
+
+        - name: Assert containerd is active
+          ansible.builtin.assert:
+            that: "containerd_status.stdout == 'active'"
+            fail_msg: "containerd is not active"
+
+        - name: Check containerd version
+          command: ctr version
+      when: check_containerd.rc != 0

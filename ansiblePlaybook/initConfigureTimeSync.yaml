@@ -1,0 +1,37 @@
+- name: Manually synchronize timezone and time
+  hosts: all
+  tasks:
+    - name: Copy timezone file
+      copy:
+        src: /usr/share/zoneinfo/Asia/Shanghai
+        dest: /etc/localtime
+
+    - name: Install chrony service
+      yum:
+        name:
+          - ntpdate
+          - chrony
+        state: present
+
+    - name: Configure chrony
+      blockinfile:
+        path: /etc/chrony.conf
+        block: |
+          server ntp.aliyun.com iburst
+          server ntp1.aliyun.com iburst
+          server ntp2.aliyun.com iburst
+          server ntp3.aliyun.com iburst
+          server ntp4.aliyun.com iburst
+          server ntp5.aliyun.com iburst
+
+    - name: Enable and start chronyd service
+      systemd:
+        name: chronyd
+        enabled: yes
+        state: started
+
+    - name: Check chronyd service status
+      command: systemctl status chronyd
+
+    - name: Display chronyd activity
+      command: chronyc activity -v

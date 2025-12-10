@@ -1,0 +1,20 @@
+- name: Disable services
+  hosts: all
+  tasks:
+    - name: Disable and stop firewalld service
+      systemd:
+        name: firewalld
+        enabled: no
+        state: stopped
+
+    - name: Disable and stop NetworkManager service
+      systemd:
+        name: NetworkManager
+        enabled: no
+        state: stopped
+
+    - name: Disable and stop postfix service
+      systemd:
+        name: postfix
+        enabled: no
+        state: stopped

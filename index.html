@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K8s Cluster Config Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        .section-title {
+            margin-top: 0;
+            color: #444;
+            border-bottom: 2px solid #007cba;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], input[type="password"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .master-node, .node-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .master-node input, .node-item input {
+            flex: 1;
+        }
+        button {
+            background-color: #007cba;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #005a87;
+        }
+        .remove-btn {
+            background-color: #dc3545;
+        }
+        .remove-btn:hover {
+            background-color: #c82333;
+        }
+        .add-btn {
+            background-color: #28a745;
+            margin-bottom: 20px;
+        }
+        .add-btn:hover {
+            background-color: #218838;
+        }
+        #output {
+            width: 100%;
+            height: 400px;
+            font-family: monospace;
+            white-space: pre;
+            overflow: auto;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            box-sizing: border-box; /* 添加这一行确保宽度计算包含padding和border */
+        }
+        .action-buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .action-buttons button {
+            margin: 0 5px; /* 统一按钮间距 */
+        }
+        .deploy-btn {
+            background-color: #ffc107;
+        }
+        .deploy-btn:hover {
+            background-color: #e0a800;
+        }
+        .init-btn {
+            background-color: #17a2b8;
+        }
+        .init-btn:hover {
+            background-color: #138496;
+        }
+        .language-switch {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .lang-btn {
+            background-color: #6c757d;
+            padding: 8px 16px;
+            font-size: 14px;
+            height: 36px; /* 固定高度 */
+            line-height: 1;   /* 行高设置 */
+            box-sizing: border-box; /* 包含边框和内边距 */
+        }
+        .lang-btn.active {
+            background-color: #007cba;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="language-switch">
+        <button class="lang-btn active" onclick="switchLanguage('zh')">中文</button>
+        <button class="lang-btn" onclick="switchLanguage('en')">English</button>
+    </div>
+
+    <h1 id="page-title">K8s 集群配置生成器</h1>
+
+    <form id="configForm">
+        <!-- Masters Section -->
+        <div class="section">
+            <h2 class="section-title" id="masters-title">Master 节点配置</h2>
+            <div id="mastersContainer">
+                <!-- Master nodes will be added here dynamically -->
+            </div>
+            <button type="button" class="add-btn" id="add-master-btn" onclick="addMaster()">添加 Master 节点</button>
+        </div>
+
+        <!-- Nodes Section -->
+        <div class="section">
+            <h2 class="section-title" id="nodes-title">Worker 节点配置</h2>
+            <div id="nodesContainer">
+                <!-- Worker nodes will be added here dynamically -->
+            </div>
+            <button type="button" class="add-btn" id="add-node-btn" onclick="addNode()">添加 Worker 节点</button>
+        </div>
+
+        <!-- Basic Configuration -->
+        <div class="section">
+            <h2 class="section-title" id="basic-config-title">基础配置</h2>
+
+            <div class="form-group">
+                <label for="firstMasterHostname" id="first-master-label">首选 Master 主机名:</label>
+                <input type="text" id="firstMasterHostname" name="firstMasterHostname" required>
+            </div>
+
+            <div class="form-group">
+                <label for="sshUser" id="ssh-user-label">SSH 用户名:</label>
+                <input type="text" id="sshUser" name="sshUser" required>
+            </div>
+
+            <div class="form-group">
+                <label for="sshPass" id="ssh-pass-label">SSH 密码:</label>
+                <input type="password" id="sshPass" name="sshPass" required>
+            </div>
+
+            <div class="form-group">
+                <label for="sshPort" id="ssh-port-label">SSH 端口:</label>
+                <input type="number" id="sshPort" name="sshPort" value="22" min="1" max="65535" required>
+            </div>
+
+            <div class="form-group">
+                <label for="networkAdapter" id="network-adapter-label">网络适配器:</label>
+                <input type="text" id="networkAdapter" name="networkAdapter" required>
+            </div>
+        </div>
+
+        <!-- Network Configuration -->
+        <div class="section">
+            <h2 class="section-title" id="network-config-title">网络配置</h2>
+
+            <div class="form-group">
+                <label for="keepalivedVip" id="vip-label">Keepalived VIP:</label>
+                <input type="text" id="keepalivedVip" name="keepalivedVip" required>
+            </div>
+
+            <div class="form-group">
+                <label for="serviceNetwork" id="service-network-label">Service 网络:</label>
+                <input type="text" id="serviceNetwork" name="serviceNetwork" required>
+            </div>
+
+            <div class="form-group">
+                <label for="podNetwork" id="pod-network-label">Pod 网络:</label>
+                <input type="text" id="podNetwork" name="podNetwork" required>
+            </div>
+
+            <div class="form-group">
+                <label for="loadBalancerIP" id="lb-ip-label">负载均衡 IP 范围:</label>
+                <input type="text" id="loadBalancerIP" name="loadBalancerIP" required>
+            </div>
+        </div>
+
+        <!-- NFS Configuration -->
+        <div class="section">
+            <h2 class="section-title" id="nfs-config-title">NFS 配置</h2>
+
+            <div class="form-group">
+                <label for="nfsDir" id="nfs-dir-label">NFS 目录:</label>
+                <input type="text" id="nfsDir" name="nfsDir" required>
+            </div>
+
+            <div class="form-group">
+                <label for="nfsServerIP" id="nfs-server-label">NFS 服务器 IP:</label>
+                <input type="text" id="nfsServerIP" name="nfsServerIP" required>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button type="button" id="generate-btn" onclick="generateConfig()">验证初始化配置</button>
+            <button type="button" class="init-btn" id="init-btn" onclick="initCluster()">初始化</button>
+            <button type="button" class="deploy-btn" id="deploy-btn" onclick="deployCluster()">部署</button>
+        </div>
+    </form>
+
+    <h2 id="output-title">生成的配置</h2>
+    <pre id="output"></pre>
+</div>
+
+<script>
+    // 国际化文本
+    const translations = {
+        zh: {
+            'page-title': 'K8s 集群配置生成器',
+            'masters-title': 'Master 节点配置',
+            'nodes-title': 'Worker 节点配置',
+            'basic-config-title': '基础配置',
+            'network-config-title': '网络配置',
+            'nfs-config-title': 'NFS 配置',
+            'first-master-label': '首选 Master 主机名:',
+            'ssh-user-label': 'SSH 用户名:',
+            'ssh-pass-label': 'SSH 密码:',
+            'ssh-port-label': 'SSH 端口:',
+            'network-adapter-label': '网络适配器:',
+            'vip-label': 'Keepalived VIP:',
+            'service-network-label': 'Service 网络:',
+            'pod-network-label': 'Pod 网络:',
+            'lb-ip-label': '负载均衡 IP 范围:',
+            'nfs-dir-label': 'NFS 目录:',
+            'nfs-server-label': 'NFS 服务器 IP:',
+            'add-master-btn': '添加 Master 节点',
+            'add-node-btn': '添加 Worker 节点',
+            'generate-btn': '验证初始化配置',
+            'init-btn': '初始化',
+            'deploy-btn': '部署',
+            'output-title': '生成的配置',
+            'master-hostname-placeholder': '主机名 (如: prod.k8s.master{num}.hq)',
+            'master-ip-placeholder': 'IP 地址 (如: {ip})',
+            'node-hostname-placeholder': '主机名 (如: prod.k8s.node{num}.hq)',
+            'node-ip-placeholder': 'IP 地址 (如: {ip})',
+            'remove-btn': '删除'
+        },
+        en: {
+            'page-title': 'K8s Cluster Config Generator',
+            'masters-title': 'Master Nodes Configuration',
+            'nodes-title': 'Worker Nodes Configuration',
+            'basic-config-title': 'Basic Configuration',
+            'network-config-title': 'Network Configuration',
+            'nfs-config-title': 'NFS Configuration',
+            'first-master-label': 'First Master Hostname:',
+            'ssh-user-label': 'SSH Username:',
+            'ssh-pass-label': 'SSH Password:',
+            'ssh-port-label': 'SSH Port:',
+            'network-adapter-label': 'Network Adapter:',
+            'vip-label': 'Keepalived VIP:',
+            'service-network-label': 'Service Network:',
+            'pod-network-label': 'Pod Network:',
+            'lb-ip-label': 'Load Balancer IP Range:',
+            'nfs-dir-label': 'NFS Directory:',
+            'nfs-server-label': 'NFS Server IP:',
+            'add-master-btn': 'Add Master Node',
+            'add-node-btn': 'Add Worker Node',
+            'generate-btn': 'Generate Config',
+            'init-btn': 'Initialize',
+            'deploy-btn': 'Deploy',
+            'output-title': 'Generated Configuration',
+            'master-hostname-placeholder': 'Hostname (e.g., prod.k8s.master{num}.hq)',
+            'master-ip-placeholder': 'IP Address (e.g., {ip})',
+            'node-hostname-placeholder': 'Hostname (e.g., prod.k8s.node{num}.hq)',
+            'node-ip-placeholder': 'IP Address (e.g., {ip})',
+            'remove-btn': 'Remove'
+        }
+    };
+
+    let currentLanguage = 'zh';
+
+    // 切换语言
+    function switchLanguage(lang) {
+        currentLanguage = lang;
+
+        // 更新按钮状态
+        const buttons = document.querySelectorAll('.lang-btn');
+        buttons.forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // 根据语言激活对应的按钮
+        if (lang === 'zh') {
+            buttons[0].classList.add('active');
+        } else {
+            buttons[1].classList.add('active');
+        }
+
+        // 更新所有可翻译元素
+        Object.keys(translations[lang]).forEach(key => {
+            const element = document.getElementById(key);
+            if (element) {
+                element.textContent = translations[lang][key];
+            }
+        });
+
+        // 特别更新按钮文本
+        document.getElementById('init-btn').textContent = translations[lang]['init-btn'];
+        document.getElementById('deploy-btn').textContent = translations[lang]['deploy-btn'];
+
+        // 更新动态添加的元素
+        updateDynamicElementsLanguage();
+        // 更新静态输入框的占位符
+        updateStaticPlaceholders();
+    }
+
+    // 更新动态元素的语言
+    function updateDynamicElementsLanguage() {
+        // 更新 Master 节点按钮文本
+        document.querySelectorAll('.master-node button').forEach(btn => {
+            btn.textContent = translations[currentLanguage]['remove-btn'];
+        });
+
+        // 更新 Worker 节点按钮文本
+        document.querySelectorAll('.node-item button').forEach(btn => {
+            btn.textContent = translations[currentLanguage]['remove-btn'];
+        });
+
+        // 更新动态添加的输入框占位符
+        updatePlaceholderTexts();
+    }
+
+    // 更新静态输入框的占位符
+    function updateStaticPlaceholders() {
+        document.getElementById('firstMasterHostname').placeholder = 
+            currentLanguage === 'zh' ? '例如: prod.k8s.master1.hq' : 'e.g., prod.k8s.master1.hq';
+        document.getElementById('sshUser').placeholder = 
+            currentLanguage === 'zh' ? '例如: root' : 'e.g., root';
+        document.getElementById('sshPass').placeholder = 
+            currentLanguage === 'zh' ? '请输入密码' : 'Enter password';
+        document.getElementById('sshPort').placeholder = 
+            currentLanguage === 'zh' ? '默认: 22' : 'Default: 22';
+        document.getElementById('networkAdapter').placeholder = 
+            currentLanguage === 'zh' ? '例如: ens192' : 'e.g., ens192';
+        document.getElementById('keepalivedVip').placeholder = 
+            currentLanguage === 'zh' ? '例如: 8.8.8.8' : 'e.g., 8.8.8.8';
+        document.getElementById('serviceNetwork').placeholder = 
+            currentLanguage === 'zh' ? '例如: 10.200.0.0/16' : 'e.g., 10.200.0.0/16';
+        document.getElementById('podNetwork').placeholder = 
+            currentLanguage === 'zh' ? '例如: 10.100.0.0/16' : 'e.g., 10.100.0.0/16';
+        document.getElementById('loadBalancerIP').placeholder = 
+            currentLanguage === 'zh' ? '例如: 172.16.32.70-172.16.32.99' : 'e.g., 172.16.32.70-172.16.32.99';
+        document.getElementById('nfsDir').placeholder = 
+            currentLanguage === 'zh' ? '例如: /nfs' : 'e.g., /nfs';
+        document.getElementById('nfsServerIP').placeholder = 
+            currentLanguage === 'zh' ? '例如: 172.16.32.66' : 'e.g., 172.16.32.66';
+    }
+
+    // 更新占位符文本
+    function updatePlaceholderTexts() {
+        const masterNodes = document.querySelectorAll('.master-node');
+        masterNodes.forEach((node, index) => {
+            const hostnameInput = node.querySelector('input[name="masterHostname[]"]');
+            const ipInput = node.querySelector('input[name="masterIP[]"]');
+
+            if (hostnameInput) {
+                hostnameInput.placeholder = translations[currentLanguage]['master-hostname-placeholder']
+                    .replace('{num}', index + 1);
+            }
+            if (ipInput) {
+                ipInput.placeholder = translations[currentLanguage]['master-ip-placeholder']
+                    .replace('{ip}', `${index + 1}.${index + 1}.${index + 1}.${index + 1}`);
+            }
+        });
+
+        const workerNodes = document.querySelectorAll('.node-item');
+        workerNodes.forEach((node, index) => {
+            const hostnameInput = node.querySelector('input[name="nodeHostname[]"]');
+            const ipInput = node.querySelector('input[name="nodeIP[]"]');
+
+            if (hostnameInput) {
+                hostnameInput.placeholder = translations[currentLanguage]['node-hostname-placeholder']
+                    .replace('{num}', index + 1);
+            }
+            if (ipInput) {
+                ipInput.placeholder = translations[currentLanguage]['node-ip-placeholder']
+                    .replace('{ip}', `${index + 4}.${index + 4}.${index + 4}.${index + 4}`);
+            }
+        });
+    }
+
+    // 初始化页面时添加默认的 master 和 node
+    window.onload = function() {
+        addMaster();
+        addNode();
+
+        // 初始化占位符
+        updateStaticPlaceholders();
+        updatePlaceholderTexts();
+    };
+
+    // 添加 Master 节点
+    function addMaster() {
+        const container = document.getElementById('mastersContainer');
+        const masterCount = container.children.length + 1;
+
+        const masterDiv = document.createElement('div');
+        masterDiv.className = 'master-node';
+        masterDiv.innerHTML = `
+                <input type="text" name="masterHostname[]" required>
+                <input type="text" name="masterIP[]" required>
+                <button type="button" class="remove-btn" onclick="removeElement(this)">${translations[currentLanguage]['remove-btn']}</button>
+            `;
+
+        container.appendChild(masterDiv);
+        updatePlaceholderTexts(); // 添加这行以确保新添加的节点也会更新占位符
+    }
+
+    // 添加 Worker 节点
+    function addNode() {
+        const container = document.getElementById('nodesContainer');
+        const nodeCount = container.children.length + 1;
+
+        const nodeDiv = document.createElement('div');
+        nodeDiv.className = 'node-item';
+        nodeDiv.innerHTML = `
+                <input type="text" name="nodeHostname[]" required>
+                <input type="text" name="nodeIP[]" required>
+                <button type="button" class="remove-btn" onclick="removeElement(this)">${translations[currentLanguage]['remove-btn']}</button>
+            `;
+
+        container.appendChild(nodeDiv);
+        updatePlaceholderTexts(); // 添加这行以确保新添加的节点也会更新占位符
+    }
+
+    // 删除元素
+    function removeElement(button) {
+        // 检查是否是删除 Master 节点，并确保不会删除所有 Master 节点
+        const isMasterNode = button.parentElement.classList.contains('master-node');
+        
+        if (isMasterNode) {
+            const masterNodes = document.querySelectorAll('.master-node');
+            // 确保至少保留一个 Master 节点
+            if (masterNodes.length <= 1) {
+                alert(currentLanguage === 'zh' ? '至少需要保留一个 Master 节点' : 'At least one Master node is required');
+                return;
+            }
+        }
+        
+        button.parentElement.remove();
+    }
+
+    // 验证初始化配置
+    function generateConfig() {
+        try {
+            // 清空输出框内容
+            document.getElementById('output').textContent = '';
+            
+            // 检查必填字段
+            const firstMasterHostname = document.getElementById('firstMasterHostname').value;
+            const sshUser = document.getElementById('sshUser').value;
+            const sshPass = document.getElementById('sshPass').value;
+            const sshPort = document.getElementById('sshPort').value;
+            const networkAdapter = document.getElementById('networkAdapter').value;
+            const keepalivedVip = document.getElementById('keepalivedVip').value;
+            const serviceNetwork = document.getElementById('serviceNetwork').value;
+            const podNetwork = document.getElementById('podNetwork').value;
+            
+            // 必填字段检查（除了 loadBalancerIP, nfsDir, nfsServerIP）
+            if (!firstMasterHostname) {
+                alert(currentLanguage === 'zh' ? '请输入首选 Master 主机名' : 'Please enter First Master Hostname');
+                return;
+            }
+            
+            if (!sshUser) {
+                alert(currentLanguage === 'zh' ? '请输入 SSH 用户名' : 'Please enter SSH Username');
+                return;
+            }
+            
+            if (!sshPass) {
+                alert(currentLanguage === 'zh' ? '请输入 SSH 密码' : 'Please enter SSH Password');
+                return;
+            }
+            
+            if (!sshPort) {
+                alert(currentLanguage === 'zh' ? '请输入 SSH 端口' : 'Please enter SSH Port');
+                return;
+            }
+            
+            if (!networkAdapter) {
+                alert(currentLanguage === 'zh' ? '请输入网络适配器' : 'Please enter Network Adapter');
+                return;
+            }
+            
+            if (!keepalivedVip) {
+                alert(currentLanguage === 'zh' ? '请输入 Keepalived VIP' : 'Please enter Keepalived VIP');
+                return;
+            }
+            
+            if (!serviceNetwork) {
+                alert(currentLanguage === 'zh' ? '请输入 Service 网络' : 'Please enter Service Network');
+                return;
+            }
+            
+            if (!podNetwork) {
+                alert(currentLanguage === 'zh' ? '请输入 Pod 网络' : 'Please enter Pod Network');
+                return;
+            }
+            
+            // 收集 Master 节点数据
+            const masterHostnames = document.querySelectorAll('input[name="masterHostname[]"]');
+            const masterIPs = document.querySelectorAll('input[name="masterIP[]"]');
+            
+            if (masterHostnames.length === 0) {
+                alert(currentLanguage === 'zh' ? '请至少添加一个 Master 节点' : 'Please add at least one Master node');
+                return;
+            }
+            
+            // 检查 Master 节点数量必须是奇数
+            if (masterHostnames.length % 2 === 0) {
+                alert(currentLanguage === 'zh' ? 'Master 节点数量必须是奇数 (1, 3, 5, ...)' : 'Master node count must be odd (1, 3, 5, ...)');
+                return;
+            }
+            
+            if (masterHostnames.length !== masterIPs.length) {
+                throw new Error(currentLanguage === 'zh' ? 'Master 主机名和 IP 数量不匹配' : 'Master hostname and IP quantity mismatch');
+            }
+            
+            const masters = {};
+            for (let i = 0; i < masterHostnames.length; i++) {
+                if (!masterHostnames[i].value) {
+                    alert(currentLanguage === 'zh' ? `请输入第${i+1}个 Master 节点的主机名` : `Please enter hostname for Master node ${i+1}`);
+                    return;
+                }
+                if (!masterIPs[i].value) {
+                    alert(currentLanguage === 'zh' ? `请输入第${i+1}个 Master 节点的 IP` : `Please enter IP for Master node ${i+1}`);
+                    return;
+                }
+                masters[masterHostnames[i].value] = masterIPs[i].value;
+            }
+            
+            // 收集 Worker 节点数据
+            const nodeHostnames = document.querySelectorAll('input[name="nodeHostname[]"]');
+            const nodeIPs = document.querySelectorAll('input[name="nodeIP[]"]');
+            
+            // Worker 节点不是必需的，但如果添加了就必须填写完整
+            if (nodeHostnames.length > 0 && nodeHostnames.length !== nodeIPs.length) {
+                throw new Error(currentLanguage === 'zh' ? 'Worker 节点主机名和 IP 数量不匹配' : 'Worker node hostname and IP quantity mismatch');
+            }
+            
+            const nodes = {};
+            for (let i = 0; i < nodeHostnames.length; i++) {
+                if (!nodeHostnames[i].value) {
+                    alert(currentLanguage === 'zh' ? `请输入第${i+1}个 Worker 节点的主机名` : `Please enter hostname for Worker node ${i+1}`);
+                    return;
+                }
+                if (!nodeIPs[i].value) {
+                    alert(currentLanguage === 'zh' ? `请输入第${i+1}个 Worker 节点的 IP` : `Please enter IP for Worker node ${i+1}`);
+                    return;
+                }
+                nodes[nodeHostnames[i].value] = nodeIPs[i].value;
+            }
+            
+            // 构建配置对象
+            const config = {
+                masters: masters,
+                nodes: nodes,
+                firstMasterHostname: firstMasterHostname,
+                sshUser: sshUser,
+                sshPass: sshPass,
+                sshPort: parseInt(sshPort),
+                networkAdapter: networkAdapter,
+                keepalivedVip: keepalivedVip,
+                serviceNetwork: serviceNetwork,
+                podNetwork: podNetwork,
+                loadBalancerIP: document.getElementById('loadBalancerIP').value,
+                nfsDir: document.getElementById('nfsDir').value,
+                nfsServerIP: document.getElementById('nfsServerIP').value
+            };
+            
+            // 显示生成的配置
+            document.getElementById('output').textContent = JSON.stringify(config, null, 2);
+            
+            // 恢复输出标题为"生成的配置"
+            document.getElementById('output-title').textContent = currentLanguage === 'zh' ? '生成的配置' : 'Generated Configuration';
+        } catch (error) {
+            alert(currentLanguage === 'zh' ? '配置生成出错: ' + error.message : 'Error generating configuration: ' + error.message);
+        }
+    }
+
+    // 初始化集群
+    function initCluster() {
+        const configText = document.getElementById('output').textContent;
+        if (!configText) {
+            alert(currentLanguage === 'zh' ? '请先生成配置' : 'Please generate configuration first');
+            return;
+        }
+
+        // 清空输出框内容
+        document.getElementById('output').textContent = '';
+
+        // 禁用按钮并显示正在处理状态
+        const initBtn = document.getElementById('init-btn');
+        const deployBtn = document.getElementById('deploy-btn');
+        const originalText = initBtn.textContent;
+        const originalBackgroundColor = initBtn.style.backgroundColor;
+        initBtn.disabled = true;
+        initBtn.textContent = currentLanguage === 'zh' ? '初始化中...' : 'Initializing...';
+        initBtn.style.backgroundColor = '#6c757d'; // 灰色表示处理中
+
+        // 更新输出标题
+        document.getElementById('output-title').textContent = currentLanguage === 'zh' ? '初始化进度' : 'Initialization Progress';
+
+        // 建立SSE连接获取进度
+        const eventSource = new EventSource('http://localhost:8080/api/init/progress');
+        
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            // 在输出框中追加进度信息
+            const output = document.getElementById('output');
+            const progressLine = `[${data.step}/${data.total}] ${data.message}\n`;
+            output.textContent += progressLine;
+            // 自动滚动到底部
+            output.scrollTop = output.scrollHeight;
+            
+            // 如果是完成消息，关闭连接并恢复按钮
+            if (data.type === 'complete') {
+                eventSource.close();
+                // 恢复按钮状态
+                initBtn.disabled = false;
+                initBtn.textContent = originalText;
+                initBtn.style.backgroundColor = originalBackgroundColor;
+            }
+        };
+        
+        eventSource.onerror = function(err) {
+            console.error('EventSource failed:', err);
+            eventSource.close();
+            // 恢复按钮状态
+            initBtn.disabled = false;
+            initBtn.textContent = originalText;
+            initBtn.style.backgroundColor = originalBackgroundColor;
+            // 显示错误信息
+            const output = document.getElementById('output');
+            output.textContent += '连接错误，进度获取失败\n';
+        };
+    }
+
+    // 部署集群
+    function deployCluster() {
+        const configText = document.getElementById('output').textContent;
+        if (!configText) {
+            alert(currentLanguage === 'zh' ? '请先生成配置' : 'Please generate configuration first');
+            return;
+        }
+
+        // 清空输出框内容
+        document.getElementById('output').textContent = '';
+
+        // 禁用按钮并显示正在处理状态
+        const initBtn = document.getElementById('init-btn');
+        const deployBtn = document.getElementById('deploy-btn');
+        const originalText = deployBtn.textContent;
+        const originalBackgroundColor = deployBtn.style.backgroundColor;
+        deployBtn.disabled = true;
+        deployBtn.textContent = currentLanguage === 'zh' ? '部署中...' : 'Deploying...';
+        deployBtn.style.backgroundColor = '#6c757d'; // 灰色表示处理中
+
+        // 更新输出标题
+        document.getElementById('output-title').textContent = currentLanguage === 'zh' ? '部署进度' : 'Deployment Progress';
+
+        // 建立SSE连接获取进度
+        const eventSource = new EventSource('http://localhost:8080/api/deploy/progress');
+        
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            // 在输出框中追加进度信息
+            const output = document.getElementById('output');
+            const progressLine = `[${data.step}/${data.total}] ${data.message}\n`;
+            output.textContent += progressLine;
+            // 自动滚动到底部
+            output.scrollTop = output.scrollHeight;
+            
+            // 如果是完成消息，关闭连接并恢复按钮
+            if (data.type === 'complete') {
+                eventSource.close();
+                // 恢复按钮状态
+                deployBtn.disabled = false;
+                deployBtn.textContent = originalText;
+                deployBtn.style.backgroundColor = originalBackgroundColor;
+            }
+        };
+        
+        eventSource.onerror = function(err) {
+            console.error('EventSource failed:', err);
+            eventSource.close();
+            // 恢复按钮状态
+            deployBtn.disabled = false;
+            deployBtn.textContent = originalText;
+            deployBtn.style.backgroundColor = originalBackgroundColor;
+            // 显示错误信息
+            const output = document.getElementById('output');
+            output.textContent += '连接错误，进度获取失败\n';
+        };
+    }
+</script>
+</body>
+</html>
