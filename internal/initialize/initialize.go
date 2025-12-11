@@ -48,7 +48,12 @@ func Process(config utils.Config, reporter ProgressReporter) error {
 		return fmt.Errorf("failed to generate Ansible inventory: %v", err)
 	}
 	// 确保在函数结束时删除临时文件
-	defer os.Remove(inventoryFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+			return
+		}
+	}(inventoryFile)
 
 	// 按顺序执行所有初始化 playbook
 	for i, playbook := range Playbooks {

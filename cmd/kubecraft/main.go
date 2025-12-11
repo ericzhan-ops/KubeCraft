@@ -210,12 +210,3 @@ func deployProgress(w http.ResponseWriter, r *http.Request) {
 		w.(http.Flusher).Flush()
 	}
 }
-
-// SimpleProgressReporter 简单进度报告器（用于非SSE接口）
-type SimpleProgressReporter struct{}
-
-// ReportProgress 报告进度（简单实现，不实际输出）
-func (s *SimpleProgressReporter) ReportProgress(message string) {
-	// 简单的日志记录
-	log.Println(message)
-}
