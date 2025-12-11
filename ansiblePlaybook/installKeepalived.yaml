@@ -15,18 +15,18 @@
 
       - name: Include JSON configuration file
         ansible.builtin.include_vars:
-          file: /usr/local/ymctl/config.json
+          file: ../config.json
           name: config
 
       - name: Create keepalived configuration file
         ansible.builtin.template:
-          src: /usr/local/ymctl/templates/keepalived.conf.j2
+          src: ../templates/keepalived.conf.j2
           dest: /etc/keepalived/keepalived.conf
         notify: restart keepalived
 
       - name: Create check_port.sh script
         ansible.builtin.template:
-          src: /usr/local/ymctl/templates/check_port.sh.j2
+          src: ../templates/check_port.sh.j2
           dest: /etc/keepalived/check_port.sh
           mode: '0755'
 

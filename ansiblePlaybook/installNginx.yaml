@@ -31,7 +31,7 @@
 
       - name: Extract Nginx source
         ansible.builtin.unarchive:
-          src: /usr/local/ymctl/pkg/nginx-1.21.6.tar.gz
+          src: ../pkg/nginx-1.21.6.tar.gz
           dest: /tmp
 
       - name: Configure Nginx
@@ -77,12 +77,12 @@
 
       - name: Load variables from JSON file
         ansible.builtin.include_vars:
-          file: /usr/local/ymctl/config.json
+          file: ../config.json
           name: config
 
       - name: Copy Nginx template to the target machine
         ansible.builtin.copy:
-          src: /usr/local/ymctl/templates/nginx.conf.j2
+          src: ../templates/nginx.conf.j2
           dest: /usr/local/nginx/conf/nginx.conf
           owner: root
           group: root

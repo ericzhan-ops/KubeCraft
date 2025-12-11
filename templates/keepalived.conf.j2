@@ -1,0 +1,30 @@
+! Configuration File for keepalived
+global_defs {
+   router_id {{ ansible_default_ipv4.address }}
+}
+
+vrrp_script chk_nginx {
+    script "/etc/keepalived/check_port.sh 8443"
+    interval 2
+    weight -20
+}
+
+vrrp_instance VI_1 {
+    state MASTER
+    interface {{ config.networkAdapter }}
+    virtual_router_id 100
+    priority 100
+    advert_int 1
+    mcast_src_ip {{ ansible_default_ipv4.address }}
+    nopreempt
+    authentication {
+        auth_type PASS
+        auth_pass 11111111
+    }
+    track_script {
+        chk_nginx
+    }
+    virtual_ipaddress {
+        {{ config.keepalivedVip }}
+    }
+}

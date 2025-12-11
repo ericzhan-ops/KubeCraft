@@ -4,7 +4,6 @@ import (
 	"KubeCraft/internal/utils"
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 	"time"
 )
@@ -41,26 +40,19 @@ func Process(config utils.Config, reporter ProgressReporter) error {
 		return fmt.Errorf("failed to install Ansible: %v", err)
 	}
 
-	// 生成 Ansible inventory 文件
-	reporter.ReportProgress("生成 Ansible inventory 文件...")
-	inventoryFile, err := config.GenerateInventory()
+	// 生成 Ansible inventory 文件到默认位置 /etc/ansible/hosts
+	reporter.ReportProgress("生成 Ansible inventory 文件到默认位置...")
+	err = config.GenerateDefaultInventory()
 	if err != nil {
 		return fmt.Errorf("failed to generate Ansible inventory: %v", err)
 	}
-	// 确保在函数结束时删除临时文件
-	defer func(name string) {
-		err := os.Remove(name)
-		if err != nil {
-			return
-		}
-	}(inventoryFile)
 
 	// 按顺序执行所有初始化 playbook
 	for i, playbook := range Playbooks {
 		stepMsg := fmt.Sprintf("执行%s (%d/%d)...", playbook, i+1, len(Playbooks))
 		reporter.ReportProgress(stepMsg)
 
-		err := executeAnsiblePlaybook(playbook, inventoryFile)
+		err := executeAnsiblePlaybook(playbook)
 		if err != nil {
 			return fmt.Errorf("failed to execute playbook %s: %v", playbook, err)
 		}
@@ -95,8 +87,7 @@ func installAnsible(reporter ProgressReporter) error {
 
 		reporter.ReportProgress("复制Ansible配置文件...")
 		log.Println("Copying ansible configuration...")
-		cmd3 := exec.Command("\\cp", "/usr/local/ymctl/ansiblePlaybook/ansible.cfg", "/etc/ansible/ansible.cfg")
-		err = cmd3.Run()
+		err = utils.CopyFile("./ansiblePlaybook/ansible.cfg", "/etc/ansible/ansible.cfg")
 		if err != nil {
 			return fmt.Errorf("failed to copy ansible configuration: %v", err)
 		}
@@ -110,12 +101,13 @@ func installAnsible(reporter ProgressReporter) error {
 }
 
 // executeAnsiblePlaybook 执行指定的 Ansible Playbook
-func executeAnsiblePlaybook(playbookName string, inventoryFile string) error {
+func executeAnsiblePlaybook(playbookName string) error {
 	// 等待一段时间确保系统准备就绪
 	time.Sleep(1 * time.Second)
 
+	// 不再需要指定 -i 参数，因为使用默认的 /etc/ansible/hosts
 	cmd := exec.Command("bash", "-c",
-		fmt.Sprintf("cd /usr/local/ymctl/ansiblePlaybook && ansible-playbook -i %s %s.yaml", inventoryFile, playbookName))
+		fmt.Sprintf("cd ./ansiblePlaybook && ansible-playbook %s.yaml", playbookName))
 
 	// 执行命令并返回结果
 	output, err := cmd.CombinedOutput()

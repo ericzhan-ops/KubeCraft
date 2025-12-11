@@ -12,9 +12,15 @@
             name: https://yum.oracle.com/repo/OracleLinux/OL8/baseos/latest/x86_64/getPackage/libseccomp-2.5.2-1.el8.x86_64.rpm
             state: present
 
+        - name: Download containerd release package
+          ansible.builtin.get_url:
+            url: "https://hub.gitmirror.com/https://github.com/containerd/containerd/releases/download/v1.6.4/cri-containerd-cni-1.6.4-linux-amd64.tar.gz"
+            dest: "/tmp/cri-containerd-cni-1.6.4-linux-amd64.tar.gz"
+            timeout: 300
+
         - name: Extract containerd release
           ansible.builtin.unarchive:
-            src: /usr/local/ymctl/pkg/cri-containerd-cni-1.6.4-linux-amd64.tar.gz
+            src: /tmp/cri-containerd-cni-1.6.4-linux-amd64.tar.gz
             dest: /
 
         - name: Create containerd config directory

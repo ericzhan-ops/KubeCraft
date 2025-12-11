@@ -645,6 +645,10 @@
             return;
         }
 
+        // 解析配置
+        const config = JSON.parse(configText);
+        console.log("Sending config to backend:", config);
+
         // 清空输出框内容
         document.getElementById('output').textContent = '';
 
@@ -660,40 +664,99 @@
         // 更新输出标题
         document.getElementById('output-title').textContent = currentLanguage === 'zh' ? '初始化进度' : 'Initialization Progress';
 
-        // 建立SSE连接获取进度
-        const eventSource = new EventSource('/api/init/progress');
-        
-        eventSource.onmessage = function(event) {
-            const data = JSON.parse(event.data);
+        // 使用 Fetch API 发送 POST 请求
+        console.log("About to send POST request to /api/init/progress");
+        fetch('/api/init/progress', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        })
+        .then(response => {
+            console.log("Response received:", response);
+            console.log("Response status:", response.status);
+            console.log("Response headers:", [...response.headers.entries()]);
             
-            // 在输出框中追加进度信息
-            const output = document.getElementById('output');
-            const progressLine = `[${data.step}/${data.total}] ${data.message}\n`;
-            output.textContent += progressLine;
-            // 自动滚动到底部
-            output.scrollTop = output.scrollHeight;
-            
-            // 如果是完成消息，关闭连接并恢复按钮
-            if (data.type === 'complete') {
-                eventSource.close();
-                // 恢复按钮状态
-                initBtn.disabled = false;
-                initBtn.textContent = originalText;
-                initBtn.style.backgroundColor = originalBackgroundColor;
+            if (!response.body) {
+                throw new Error('ReadableStream not supported in this browser.');
             }
-        };
-        
-        eventSource.onerror = function(err) {
-            console.error('EventSource failed:', err);
-            eventSource.close();
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            // 递归读取流数据
+            function readStream() {
+                reader.read().then(({ done, value }) => {
+                    if (done) {
+                        console.log("Stream reading completed");
+                        // 恢复按钮状态
+                        initBtn.disabled = false;
+                        initBtn.textContent = originalText;
+                        initBtn.style.backgroundColor = originalBackgroundColor;
+                        return;
+                    }
+
+                    // 解码数据
+                    const text = decoder.decode(value, { stream: true });
+                    console.log("Received data:", text);
+                    
+                    // 处理接收到的数据（每行是一个事件）
+                    const lines = text.split('\n');
+                    lines.forEach(line => {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                console.log("Parsed event data:", data);
+                                
+                                // 在输出框中追加进度信息
+                                const output = document.getElementById('output');
+                                const progressLine = `[${data.step}/${data.total}] ${data.message}\n`;
+                                output.textContent += progressLine;
+                                // 自动滚动到底部
+                                output.scrollTop = output.scrollHeight;
+                                
+                                // 如果是完成或错误消息，关闭连接并恢复按钮
+                                if (data.type === 'complete' || data.type === 'error') {
+                                    console.log("Process completed or errored");
+                                    // 恢复按钮状态
+                                    initBtn.disabled = false;
+                                    initBtn.textContent = originalText;
+                                    initBtn.style.backgroundColor = originalBackgroundColor;
+                                }
+                            } catch (e) {
+                                console.error('Error parsing JSON:', e);
+                            }
+                        }
+                    });
+
+                    // 继续读取
+                    readStream();
+                }).catch(error => {
+                    console.error('Error reading stream:', error);
+                    // 恢复按钮状态
+                    initBtn.disabled = false;
+                    initBtn.textContent = originalText;
+                    initBtn.style.backgroundColor = originalBackgroundColor;
+                    // 显示错误信息
+                    const output = document.getElementById('output');
+                    output.textContent += '连接错误，进度获取失败: ' + error.message + '\n';
+                });
+            }
+
+            // 开始读取流
+            readStream();
+        })
+        .catch(error => {
+            console.error('Error sending request:', error);
             // 恢复按钮状态
             initBtn.disabled = false;
             initBtn.textContent = originalText;
             initBtn.style.backgroundColor = originalBackgroundColor;
             // 显示错误信息
             const output = document.getElementById('output');
-            output.textContent += '连接错误，进度获取失败\n';
-        };
+            output.textContent += '请求发送失败: ' + error.message + '\n';
+        });
     }
 
     // 部署集群
@@ -703,6 +766,10 @@
             alert(currentLanguage === 'zh' ? '请先生成配置' : 'Please generate configuration first');
             return;
         }
+
+        // 解析配置
+        const config = JSON.parse(configText);
+        console.log("Sending config to backend:", config);
 
         // 清空输出框内容
         document.getElementById('output').textContent = '';
@@ -719,40 +786,95 @@
         // 更新输出标题
         document.getElementById('output-title').textContent = currentLanguage === 'zh' ? '部署进度' : 'Deployment Progress';
 
-        // 建立SSE连接获取进度
-        const eventSource = new EventSource('/api/deploy/progress');
-        
-        eventSource.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            
-            // 在输出框中追加进度信息
-            const output = document.getElementById('output');
-            const progressLine = `[${data.step}/${data.total}] ${data.message}\n`;
-            output.textContent += progressLine;
-            // 自动滚动到底部
-            output.scrollTop = output.scrollHeight;
-            
-            // 如果是完成消息，关闭连接并恢复按钮
-            if (data.type === 'complete') {
-                eventSource.close();
-                // 恢复按钮状态
-                deployBtn.disabled = false;
-                deployBtn.textContent = originalText;
-                deployBtn.style.backgroundColor = originalBackgroundColor;
+        // 使用 Fetch API 发送 POST 请求
+        fetch('/api/deploy/progress', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        })
+        .then(response => {
+            console.log("Response received:", response);
+            if (!response.body) {
+                throw new Error('ReadableStream not supported in this browser.');
             }
-        };
-        
-        eventSource.onerror = function(err) {
-            console.error('EventSource failed:', err);
-            eventSource.close();
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            // 递归读取流数据
+            function readStream() {
+                reader.read().then(({ done, value }) => {
+                    if (done) {
+                        console.log("Stream reading completed");
+                        // 恢复按钮状态
+                        deployBtn.disabled = false;
+                        deployBtn.textContent = originalText;
+                        deployBtn.style.backgroundColor = originalBackgroundColor;
+                        return;
+                    }
+
+                    // 解码数据
+                    const text = decoder.decode(value, { stream: true });
+                    console.log("Received data:", text);
+                    
+                    // 处理接收到的数据（每行是一个事件）
+                    const lines = text.split('\n');
+                    lines.forEach(line => {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                console.log("Parsed event data:", data);
+                                
+                                // 在输出框中追加进度信息
+                                const output = document.getElementById('output');
+                                const progressLine = `[${data.step}/${data.total}] ${data.message}\n`;
+                                output.textContent += progressLine;
+                                // 自动滚动到底部
+                                output.scrollTop = output.scrollHeight;
+                                
+                                // 如果是完成或错误消息，关闭连接并恢复按钮
+                                if (data.type === 'complete' || data.type === 'error') {
+                                    console.log("Process completed or errored");
+                                    // 恢复按钮状态
+                                    deployBtn.disabled = false;
+                                    deployBtn.textContent = originalText;
+                                    deployBtn.style.backgroundColor = originalBackgroundColor;
+                                }
+                            } catch (e) {
+                                console.error('Error parsing JSON:', e);
+                            }
+                        }
+                    });
+
+                    // 继续读取
+                    readStream();
+                }).catch(error => {
+                    console.error('Error reading stream:', error);
+                    // 恢复按钮状态
+                    deployBtn.disabled = false;
+                    deployBtn.textContent = originalText;
+                    deployBtn.style.backgroundColor = originalBackgroundColor;
+                    // 显示错误信息
+                    const output = document.getElementById('output');
+                    output.textContent += '连接错误，进度获取失败\n';
+                });
+            }
+
+            // 开始读取流
+            readStream();
+        })
+        .catch(error => {
+            console.error('Error sending request:', error);
             // 恢复按钮状态
             deployBtn.disabled = false;
             deployBtn.textContent = originalText;
             deployBtn.style.backgroundColor = originalBackgroundColor;
             // 显示错误信息
             const output = document.getElementById('output');
-            output.textContent += '连接错误，进度获取失败\n';
-        };
+            output.textContent += '请求发送失败: ' + error.message + '\n';
+        });
     }
 </script>
 </body>

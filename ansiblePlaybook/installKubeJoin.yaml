@@ -32,7 +32,7 @@
 
       - name: Include JSON configuration file
         ansible.builtin.include_vars:
-          file: /usr/local/ymctl/config.json
+          file: ../config.json
           name: config
 
       - name: Get hostname

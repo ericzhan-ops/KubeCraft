@@ -3,12 +3,12 @@
   tasks:
     - name: Load variables from JSON file
       ansible.builtin.include_vars:
-        file: /usr/local/ymctl/config.json
+        file: ../config.json
         name: config
 
     - name: Copy Hosts template to the target machine
       ansible.builtin.copy:
-        src: /usr/local/ymctl/templates/hosts.j2
+        src: ../templates/hosts.j2
         dest: /etc/hosts
         owner: root
         group: root

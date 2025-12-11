@@ -26,12 +26,12 @@
 
       - name: Include JSON configuration file
         ansible.builtin.include_vars:
-          file: /usr/local/ymctl/config.json
+          file: ../config.json
           name: config
 
       - name: Create kubeadm-init configuration file
         ansible.builtin.template:
-          src: /usr/local/ymctl/templates/kubeadm-init.yaml.j2
+          src: ../templates/kubeadm-init.yaml.j2
           dest: /tmp/kubeadm-init.yaml
         delegate_to: localhost
         run_once: true

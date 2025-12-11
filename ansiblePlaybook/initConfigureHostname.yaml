@@ -3,7 +3,7 @@
   tasks:
     - name: Read JSON configuration file
       slurp:
-        src: "/usr/local/ymctl/config.json"
+        src: "../config.json"
       register: json_content
       delegate_to: localhost
       run_once: true

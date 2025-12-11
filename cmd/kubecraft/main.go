@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -107,13 +108,36 @@ func initializeProgress(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// 记录请求信息用于调试
+	log.Printf("Received request: %s %s", r.Method, r.URL.Path)
+	log.Printf("Content-Type: %s", r.Header.Get("Content-Type"))
+	log.Printf("Content-Length: %s", r.Header.Get("Content-Length"))
+	log.Printf("User-Agent: %s", r.Header.Get("User-Agent"))
+	log.Printf("Accept: %s", r.Header.Get("Accept"))
+
+	// 检查请求方法
+	if r.Method != "POST" {
+		log.Printf("WARNING: Expected POST request but got %s", r.Method)
+	}
 
 	// 解析请求体中的配置
 	var config utils.Config
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+		log.Printf("Failed to decode request body: %v", err)
 		// 如果没有请求体，使用默认配置
 		config = utils.Config{}
+	} else {
+		log.Printf("Successfully decoded config: %+v", config)
+		log.Printf("Masters: %+v", config.Masters)
+		log.Printf("Nodes: %+v", config.Nodes)
+
+		// 将配置保存到项目根目录的 config.json 文件中
+		if err := saveConfigToFile(config, "config.json"); err != nil {
+			log.Printf("Failed to save config to file: %v", err)
+		} else {
+			log.Printf("Config successfully saved to config.json")
+		}
 	}
 
 	// 创建进度报告器
@@ -162,13 +186,36 @@ func deployProgress(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// 记录请求信息用于调试
+	log.Printf("Received request: %s %s", r.Method, r.URL.Path)
+	log.Printf("Content-Type: %s", r.Header.Get("Content-Type"))
+	log.Printf("Content-Length: %s", r.Header.Get("Content-Length"))
+	log.Printf("User-Agent: %s", r.Header.Get("User-Agent"))
+	log.Printf("Accept: %s", r.Header.Get("Accept"))
+
+	// 检查请求方法
+	if r.Method != "POST" {
+		log.Printf("WARNING: Expected POST request but got %s", r.Method)
+	}
 
 	// 解析请求体中的配置
 	var config utils.Config
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+		log.Printf("Failed to decode request body: %v", err)
 		// 如果没有请求体，使用默认配置
 		config = utils.Config{}
+	} else {
+		log.Printf("Successfully decoded config: %+v", config)
+		log.Printf("Masters: %+v", config.Masters)
+		log.Printf("Nodes: %+v", config.Nodes)
+
+		// 将配置保存到项目根目录的 config.json 文件中
+		if err := saveConfigToFile(config, "config.json"); err != nil {
+			log.Printf("Failed to save config to file: %v", err)
+		} else {
+			log.Printf("Config successfully saved to config.json")
+		}
 	}
 
 	// 创建进度报告器
@@ -209,4 +256,23 @@ func deployProgress(w http.ResponseWriter, r *http.Request) {
 		}
 		w.(http.Flusher).Flush()
 	}
+}
+
+// saveConfigToFile 将配置保存到文件
+func saveConfigToFile(config utils.Config, filename string) error {
+	// 创建或截断文件
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create config file: %v", err)
+	}
+	defer file.Close()
+
+	// 将配置编码为JSON并写入文件
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ") // 美化输出
+	if err := encoder.Encode(config); err != nil {
+		return fmt.Errorf("failed to encode config to JSON: %v", err)
+	}
+
+	return nil
 }
